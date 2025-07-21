@@ -2,9 +2,9 @@ import openai
 
 # Azure OpenAI Config
 openai.api_type = "azure"
-openai.api_base = "https://codeblackgenaigenerator.openai.azure.com/"
+openai.api_base = "-"
 openai.api_version = "2023-03-15-preview"
-openai.api_key = "b2fd66194c56425ca3282391aeb3702f"
+openai.api_key = "-"
 # For comparing two documents
 def compare_texts(text1: str, text2: str, prompt: str) -> str:
     response = openai.ChatCompletion.create(
