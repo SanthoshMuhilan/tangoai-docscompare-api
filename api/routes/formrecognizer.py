@@ -1,3 +1,4 @@
+from config import AZURE_FORM_RECOGNIZER_ENDPOINT, AZURE_FORM_RECOGNIZER_KEY
 from fastapi import FastAPI,APIRouter, HTTPException
 from pydantic import BaseModel
 from azure.ai.formrecognizer import DocumentAnalysisClient
@@ -7,13 +8,13 @@ import json
 router = APIRouter()
 
 #Form recognizer credentials
-FORM_RECOGNIZER_ENDPOINT = "-"
-FORM_RECOGNIZER_KEY = "-"
+#FORM_RECOGNIZER_ENDPOINT = AZURE_FORM_RECOGNIZER_ENDPOINT
+#FORM_RECOGNIZER_KEY = AZURE_FORM_RECOGNIZER_KEY
 
 #initialize the DocumentAnalysisClient
 form_recognizer_client = DocumentAnalysisClient(
-    endpoint=FORM_RECOGNIZER_ENDPOINT,
-    credential=AzureKeyCredential(FORM_RECOGNIZER_KEY)
+    endpoint=AZURE_FORM_RECOGNIZER_ENDPOINT,
+    credential=AzureKeyCredential(AZURE_FORM_RECOGNIZER_KEY)
 )
 
 class RecognizeRequest(BaseModel):
