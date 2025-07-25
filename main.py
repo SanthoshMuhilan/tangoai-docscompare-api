@@ -1,21 +1,38 @@
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()  
+load_dotenv()
 
+# get environment CORS configuration
+from fastapi.middleware.cors import CORSMiddleware
+from config import CORS_ORIGIN_PROD, ENVIRONMENT
+
+if ENVIRONMENT == "PRODUCTION":
+    cors_origins = [CORS_ORIGIN_PROD]
+else:
+    cors_origins = ["http://localhost:3000", "http://127.0.0.1:8000"]
+
+# Import FastAPI and other necessary modules
 from fastapi import FastAPI, UploadFile, File, Form
-from app.api.routes import upload,formrecognizer,comparedocuments,generatePDF
-from app.api.routes.formrecognizer import RecognizeRequest
-from app.services.azure_cosmos import getdocumentidbybloburl, updatedocument_withfulltext
-from app.api.routes.comparedocuments import comparetwodocs
-
 app = FastAPI(
     title="Document Comparison API",
     description="API for uploading and comparing documents",
     version="1.0.0"
 )
+#enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+)
 
-        
+
+from app.api.routes import upload,formrecognizer,comparedocuments,generatePDF
+from app.api.routes.formrecognizer import RecognizeRequest
+from app.services.azure_cosmos import getdocumentidbybloburl, updatedocument_withfulltext
+from app.api.routes.comparedocuments import comparetwodocs       
 
 # Include routes
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
