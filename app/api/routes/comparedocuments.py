@@ -34,5 +34,4 @@ def comparetwodocsdirect(doc_id_1: str, doc_id_2: str, doc_id_1_fullText: str, d
 
    comparison_id = f"comparison_{datetime.utcnow().isoformat()}"
    comparison_id_added = save_comparison_result(comparison_id, doc_id_1, doc_id_2, comparison_summary)
-   return {"comparison_id": comparison_id, "comparison_summary": comparison_summary, "added_id": comparison_id_added}   
-
+   return {"comparison_id": comparison_id, "comparison_summary": comparison_summary, "added_id": comparison_id_added}

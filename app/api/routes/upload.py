@@ -29,4 +29,3 @@ async def uploadforcompare(file1: UploadFile = File(...), file2: UploadFile = Fi
     metadata2 = save_file_metadata(file2.filename, blob_url2, blob_url_sas2, "purpose: comparison", userId)    
     
     return { "blob_url1": blob_url1, "blob_url_sas1": blob_url_sas1, "blob_url2": blob_url2, "blob_url_sas2": blob_url_sas2,"file1": metadata1, "file2": metadata2, "message": "Files uploaded for comparison successfully." }
-

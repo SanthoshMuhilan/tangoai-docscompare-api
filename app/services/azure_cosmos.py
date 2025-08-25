@@ -197,16 +197,14 @@ def historyResults(userId: str):
     container = database.get_container_client(COMPARISON_CONTAINER_NAME)
     print("Fetching History Started")    
     query = "select c.id, c.docId1, c.docId2, c.comparison_overallsummary, c.pdfUrlSaS, c.createdAt from c where c.userId = @userId"
-    parameters = [{"name": "@userId", "value": userId}]
-    
+    parameters = [{"name": "@userId", "value": userId}]    
     items = list(container.query_items(query=query, parameters=parameters, enable_cross_partition_query=True))
     print(str(len(items)))
     print("Fetching History Completed") 
     if items:
         return {"userId": userId , "history": items, "count":str(len(items)) ,  "message": "History fetched successfully."}
     else:
-        return {"userId": userId , "history": [], "count":0 , "message": "No history found for the user."}            
-
+        return {"userId": userId , "history": [], "count":0 , "message": "No history found for the user."}
 
 
 

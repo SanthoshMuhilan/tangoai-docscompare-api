@@ -120,4 +120,4 @@ async def historyResultsByUserId(userId: str):
     print("Started")
     historyresultsResponse = historyResults(userId)
     print(historyresultsResponse)
-    return {"userId": historyresultsResponse["userId"] , "historyResultdetails": historyresultsResponse["history"], "historyResultsCount":historyresultsResponse["count"],  "message": historyresultsResponse["message"]}    
+    return {"userId": historyresultsResponse["userId"] , "historyResultdetails": historyresultsResponse["history"], "historyResultsCount":historyresultsResponse["count"],  "message": historyresultsResponse["message"]}
