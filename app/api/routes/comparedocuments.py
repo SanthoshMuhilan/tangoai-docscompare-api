@@ -1,7 +1,7 @@
 # === compare.py ===
 from fastapi import APIRouter
 from app.services.azure_cosmos import save_comparison_result, fetch_chunks_by_document
-from app.services.openai_gpt import compare_texts
+from app.services.openai_gpt import compare_texts, comparsionOverallSummary
 from app.utils.semanticsearch import semantic_search
 from app.utils.chunkingpreprocess import preprocess
 from datetime import datetime
@@ -21,8 +21,10 @@ def comparetwodocs(doc_id_1: str, doc_id_2: str, doc_id_1_fullText: str, doc_id_
 
    comparison_summary = compare_texts(semantic_search_results_1, semantic_search_results_2, prompt)
    print("Comparison completed. Saving results...")
+
+   comparisonOverallSummary = comparsionOverallSummary(comparison_summary)
       
-   return {"comparison_summary": comparison_summary}   
+   return {"comparison_summary": comparison_summary,"comparsion_overallsummary": comparisonOverallSummary}   
 
 @router.get("/comparedocsdirect")
 def comparetwodocsdirect(doc_id_1: str, doc_id_2: str, doc_id_1_fullText: str, doc_id_2_fullText: str, prompt: str) -> str:
