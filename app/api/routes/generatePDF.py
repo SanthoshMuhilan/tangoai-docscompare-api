@@ -18,7 +18,7 @@ blob_service_client = BlobServiceClient.from_connection_string(AZURE_BLOB_CONNEC
 container_client_blob = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
 
 @router.post("/generatePDF")
-def generate_upload_comparison_pdf(doc_id_1: str, doc_id_2: str, summary: str, metadata: dict = None) -> dict:
+def generate_upload_comparison_pdf(doc_id_1: str, doc_id_2: str, summary: str, comparison_overallsummary:str, userId:str, metadata: dict = None) -> dict:
    pdf = FPDF()
    pdf.add_page()
 
@@ -61,7 +61,7 @@ def generate_upload_comparison_pdf(doc_id_1: str, doc_id_2: str, summary: str, m
 
    print("Comparison completed. Saving results...")
    comparison_id = f"Comparison_{doc_id_1}_vs_{doc_id_2}_{datetime.utcnow().isoformat()}"
-   comparisonidadded = save_comparison_result(comparison_id, doc_id_1, doc_id_2, summary, blob_url,pdf_bloburl_sas, metadata)
+   comparisonidadded = save_comparison_result(comparison_id, doc_id_1, doc_id_2, summary, blob_url,pdf_bloburl_sas, metadata, comparison_overallsummary,userId )
    print(f"Comparison saved with ID: {comparison_id}")
    
    return { "pdfurl": blob_url, "pdfurl_sas": pdf_bloburl_sas, "comparison_id": comparison_id }

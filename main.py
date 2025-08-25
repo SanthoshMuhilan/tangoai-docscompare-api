@@ -31,7 +31,7 @@ app.add_middleware(
 
 from app.api.routes import upload,formrecognizer,comparedocuments,generatePDF
 from app.api.routes.formrecognizer import RecognizeRequest
-from app.services.azure_cosmos import getdocumentidbybloburl, updatedocument_withfulltext
+from app.services.azure_cosmos import getdocumentidbybloburl, updatedocument_withfulltext, registerUser, loginUser, historyResults
 from app.api.routes.comparedocuments import comparetwodocs       
 
 # Include routes
@@ -45,31 +45,37 @@ def read_root():
     return {"message": "Welcome to the Document Comparison API. Use the /docs endpoint to explore the API."}
 
 @app.post("/compare")
-async def compare(file1: UploadFile = File(...), file2: UploadFile = File(...), prompt: str = Form(...)):
+async def compare(file1: UploadFile = File(...), file2: UploadFile = File(...), prompt: str = Form(...), userId: str = Form(...)):
     """
     Endpoint to compare two documents.
     Upload two files and the API will return a comparison summary.
     """
     # Upload files to Azure Blob Storage
-    uploadedResponse = await upload.uploadforcompare(file1, file2)
+    uploadedResponse = await upload.uploadforcompare(file1, file2, userId)
     blob_url1 = uploadedResponse["blob_url1"]
     blob_url_sas1 = uploadedResponse["blob_url_sas1"]
+    print("Uploaded file 1 to Azure Blob Storage")
 
     blob_url2 = uploadedResponse["blob_url2"]
-    blob_url_sas2 = uploadedResponse["blob_url_sas2"]    
+    blob_url_sas2 = uploadedResponse["blob_url_sas2"]  
+    print("Uploaded file 2 to Azure Blob Storage")  
 
     get_document_id1 = getdocumentidbybloburl(blob_url1)
     get_document_id2 = getdocumentidbybloburl(blob_url2)
+    print("Get Document Ids from Azure Blob Storage")
 
     # form recognizer extraction
     formregonizerResponse1 = await formrecognizer.extractsections(RecognizeRequest(blob_url=blob_url_sas1))
     formregonizerResponse2 = await formrecognizer.extractsections(RecognizeRequest(blob_url=blob_url_sas2))
     file1_readaabletxt = formregonizerResponse1["readable_text"]
     file2_readaabletxt = formregonizerResponse2["readable_text"]
+    print("Get files as readable text from Form Recognizer")
+
+    print(f"User ID: {userId}")
 
     # Save the extracted text to Cosmos DB
-    updatedocument_withfulltext(get_document_id1,"santhosh123",file1_readaabletxt)
-    updatedocument_withfulltext(get_document_id2,"santhosh123", file2_readaabletxt)
+    updatedocument_withfulltext(get_document_id1,userId,file1_readaabletxt)
+    updatedocument_withfulltext(get_document_id2,userId, file2_readaabletxt)
 
     # Compare the two documents
     comparetwodocumentssummary = comparedocuments.comparetwodocs(
@@ -81,11 +87,37 @@ async def compare(file1: UploadFile = File(...), file2: UploadFile = File(...), 
     )
     #comparisonsummaryresponse = comparetwodocuments(get_document_id1, get_document_id2,file1_readaabletxt, file2_readaabletxt, prompt)
     comparison_summary = comparetwodocumentssummary["comparison_summary"]
+    comparison_overallsummary = comparetwodocumentssummary["comparsion_overallsummary"]
 
     # Generate PDF report and upload to Azure Blob Storage , Save the comparison result in Cosmos DB
-    generatePDFresponse = generatePDF.generate_upload_comparison_pdf(get_document_id1, get_document_id2, comparison_summary)
+    generatePDFresponse = generatePDF.generate_upload_comparison_pdf(get_document_id1, get_document_id2, comparison_summary,comparison_overallsummary,userId)
     pdfurl = generatePDFresponse["pdfurl"]
     comparison_id = generatePDFresponse["comparison_id"]
     pdfurl_sas = generatePDFresponse["pdfurl_sas"] 
 
-    return {"pdfurl": pdfurl, "comparison_id": comparison_id , "pdf_url_sas":pdfurl_sas ,"message": "Please use the /api/comparedocuments endpoint."}
+    return {"pdfurl": pdfurl, "comparison_id": comparison_id , "pdf_url_sas":pdfurl_sas ,"comparsion_overallsummary": comparison_overallsummary, "message": "Please use the /api/comparedocuments endpoint."}
+
+@app.post("/registerUser")
+async def register_user(userName: str, userEmailId: str, userPassword: str):
+    """
+    Register a new user and generate a unique user id."""
+
+    registerResponse = registerUser(userName,userEmailId,userPassword)
+    return {"userId": registerResponse["userId"] , "message": registerResponse["message"]}
+
+@app.post("/loginUser")
+async def login_user(userEmailId: str, userPassword: str):
+    """
+    login user"""
+
+    loginResponse = loginUser(userEmailId,userPassword)
+    return {"userId": loginResponse["userId"] , "message": loginResponse["message"]}
+
+@app.post("/historyResults")
+async def historyResultsByUserId(userId: str):
+    """
+    Get the comparsion results based on the user id"""
+    print("Started")
+    historyresultsResponse = historyResults(userId)
+    print(historyresultsResponse)
+    return {"userId": historyresultsResponse["userId"] , "historyResultdetails": historyresultsResponse["history"], "historyResultsCount":historyresultsResponse["count"],  "message": historyresultsResponse["message"]}    

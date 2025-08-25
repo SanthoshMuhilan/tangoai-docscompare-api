@@ -1,12 +1,13 @@
 import uuid
+import hashlib
 from datetime import datetime
-from config import COSMOS_ENDPOINT, COSMOS_KEY, DATABASE_NAME, DOCUMENT_CONTAINER_NAME, EMBEDDING_CONTAINER_NAME, COMPARISON_CONTAINER_NAME, CHAT_CONTAINER_NAME
+from config import COSMOS_ENDPOINT, COSMOS_KEY, DATABASE_NAME, DOCUMENT_CONTAINER_NAME, EMBEDDING_CONTAINER_NAME, COMPARISON_CONTAINER_NAME, CHAT_CONTAINER_NAME, USER_CONTAINER_NAME
 from azure.cosmos import CosmosClient,partition_key
 
 client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
 database = client.get_database_client(DATABASE_NAME)
 
-def save_file_metadata(file_name: str, blob_url:str, blob_url_sas:str, additional_data: None = None):
+def save_file_metadata(file_name: str, blob_url:str, blob_url_sas:str, additional_data: None = None, userId: str = None):
     """
     Save file metadata to Cosmos DB.
     
@@ -25,7 +26,7 @@ def save_file_metadata(file_name: str, blob_url:str, blob_url_sas:str, additiona
         "blobUrlSas": blob_url_sas,
         "uploadedAt": __import__("datetime").datetime.utcnow().isoformat(),
         "additionalData": additional_data,
-        "userId": "santhosh123"  # Example user ID, replace with actual user ID if available
+        "userId": userId  # Example user ID, replace with actual user ID if available
     }
     container.upsert_item(metadata)
     return metadata
@@ -63,6 +64,7 @@ def updatedocument_withfulltext(doc_id:str, user_id:str, full_text:str):
     # Update the full text field
     item["fullText"] = full_text
     
+    print("full text retrival completed for document ID")
     # Upsert the updated item
     container.upsert_item(item) 
 
@@ -91,19 +93,22 @@ def fetch_chunks_by_document(document_id: str):
     print(f"Fetched {len(chunks)} chunks for document {document_id}")
     return chunks, embeddings
 
-def save_comparison_result(comparison_id:str, doc_id_1: str, doc_id_2: str, summary: str, pdf_url: str = None,pdf_url_sas: str = None, metadata: dict = None):
+def save_comparison_result(comparison_id:str, doc_id_1: str, doc_id_2: str, summary: str, pdf_url: str = None,pdf_url_sas: str = None, metadata: dict = None, comparison_overallsummary:str = None , userId:str = None):
     
     comparison_container = database.get_container_client(COMPARISON_CONTAINER_NAME)
     #comparison_id = str(uuid.uuid4())  # Generate unique ID
     item = {
         "id": comparison_id,
+        "documentId": comparison_id,
         "docId1": doc_id_1,
         "docId2": doc_id_2,
         "summary": summary,
+        "comparison_overallsummary": comparison_overallsummary,
         "pdfUrl": pdf_url,
         "pdfUrlSaS": pdf_url_sas,
         "createdAt": datetime.utcnow().isoformat(),
-        "metadata": metadata or {}
+        "metadata": metadata or {},
+        "userId": userId
     }
     # Insert into Cosmos DB
     comparison_container.upsert_item(item)
@@ -131,3 +136,81 @@ def fetch_chat_history(document_id: str, limit: int = 50, sort_order: str = "asc
     ))
     print(f"Fetched {len(chats)} chat(s) for Document ID: {document_id}")
     return chats
+
+def registerUser(userName: str, userEmailId: str, userPassword: str):
+    """
+    Save user data to Cosmos DB.
+    
+    :param user_id: The ID of the user.
+    :param user_data: The data to save for the user.
+    """
+    container = database.get_container_client(USER_CONTAINER_NAME)
+    print(f"User with email already exists.{USER_CONTAINER_NAME}")
+    # Check if already available'
+    query = f"Select u.userId from user u where u.userEmailId = '{userEmailId}'"    
+    if query:
+        parameters = [{"name": "@userEmailId", "value": userEmailId}]
+        items = list(container.query_items(query=query, parameters=parameters, enable_cross_partition_query=True))
+        if len(items) > 0:
+            print(f"User with email {userEmailId} already exists.")
+            #return items[0]["userId"].strip()
+            return {"userId": items[0]["userId"].strip(), "message": "User with email already exists."}
+        else:
+            # Create or update user data
+            print(f"User data saved for User ID")
+            item = {
+                "id": str(uuid.uuid4()),
+                "userId": str(uuid.uuid4()),  # Generate a unique ID for the user data
+                "userName": userName,
+                "userEmailId": userEmailId,
+                #"userPassword": hashlib.sha256(userPassword.encode()).hexdigest(),  # Store hashed password
+                "userPassword": userPassword,
+                "updatedAt": datetime.utcnow().isoformat()
+            }
+            print(f"User data saved for User ID: {item['userId']}")
+            container.upsert_item(item)
+            print(f"User data saved for User ID: {item['userId']}")
+            #return item["userId"].strip()
+            return {"userId": item["userId"].strip(), "message": "User registered successfully."}
+
+def loginUser(userEmailId: str, userPassword: str):
+    """
+    login user.
+    """
+    container = database.get_container_client(USER_CONTAINER_NAME)
+
+    # Check if already available
+    query = "Select u.userId from user u where u.userEmailId = @userEmailId and u.userPassword = @userPassword"
+    if query:
+        parameters = [{"name": "@userEmailId", "value": userEmailId} , {"name": "@userPassword", "value": userPassword}]
+        items = list(container.query_items(query=query, parameters=parameters, enable_cross_partition_query=True))
+        if items:
+            print(f"User with email {userEmailId} already exists.")
+            #return items[0]["userId"].strip()
+            return {"userId": items[0]["userId"].strip(), "message": "User with email already exists."}
+        else:
+            return {"userId": "", "message": "Invalid username or password. Kindly validate, Register and login to use the service."}
+
+def historyResults(userId: str):
+    """
+    Get the comparsion results based on the user id"""
+    container = database.get_container_client(COMPARISON_CONTAINER_NAME)
+    print("Fetching History Started")    
+    query = "select c.id, c.docId1, c.docId2, c.comparison_overallsummary, c.pdfUrlSaS, c.createdAt from c where c.userId = @userId"
+    parameters = [{"name": "@userId", "value": userId}]
+    
+    items = list(container.query_items(query=query, parameters=parameters, enable_cross_partition_query=True))
+    print(str(len(items)))
+    print("Fetching History Completed") 
+    if items:
+        return {"userId": userId , "history": items, "count":str(len(items)) ,  "message": "History fetched successfully."}
+    else:
+        return {"userId": userId , "history": [], "count":0 , "message": "No history found for the user."}            
+
+
+
+
+
+                
+    
+    

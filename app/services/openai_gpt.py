@@ -29,7 +29,6 @@ def compare_texts(text1: str, text2: str, prompt: str) -> str:
            {"role": "system", "content": "You are an AI that compares two documents."},
            {"role": "user", "content": full_prompt}
        ],
-    max_tokens=4096,
     temperature=1.0,
     top_p=1.0,
     model=model_name_chat
@@ -54,6 +53,24 @@ def analyze_single_text(text: str, prompt: str) -> str:
     model=model_name_chat
     )
     return response.choices[0].message.content
+
+
+def comparsionOverallSummary(text:str) -> str:
+    full_summary_prompt = f"""    
+    {text}
+    Instructions:
+    Generate a overall summary with 3-4 lines text for the given text which is a comparsion results.
+    """
+    responseSummary = client.chat.completions.create(
+    messages=[
+        {"role": "system", "content": "You are an AI assistant to summarize document results."},
+        {"role": "user", "content": full_summary_prompt}
+    ],   
+    temperature=1.0,
+    top_p=1.0,
+    model=model_name_chat
+    )
+    return responseSummary.choices[0].message.content        
 
 def create_embedding(text: str) -> list:
     response = client.embeddings.create(

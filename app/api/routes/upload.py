@@ -16,7 +16,7 @@ async def upload_document(file: UploadFile = File(...)):
     return {"blob_url": blob_url, "blob_url_sas": blob_url_sas, "message": "File uploaded successfully."}
 
 @router.post("/uploadforcompare")
-async def uploadforcompare(file1: UploadFile = File(...), file2: UploadFile = File(...)):
+async def uploadforcompare(file1: UploadFile = File(...), file2: UploadFile = File(...), userId: str = None ):
     #upload both files to blob storage
     blob_url1 = await upload_to_blob(file1)
     blob_url2 = await upload_to_blob(file2)
@@ -25,8 +25,8 @@ async def uploadforcompare(file1: UploadFile = File(...), file2: UploadFile = Fi
     blob_url_sas2 = await generate_sas_url(file2.filename)
     
     #save metadata to Cosmos DB
-    metadata1 = save_file_metadata(file1.filename, blob_url1, blob_url_sas1, "purpose: comparison")
-    metadata2 = save_file_metadata(file2.filename, blob_url2, blob_url_sas2, "purpose: comparison")    
+    metadata1 = save_file_metadata(file1.filename, blob_url1, blob_url_sas1, "purpose: comparison", userId)
+    metadata2 = save_file_metadata(file2.filename, blob_url2, blob_url_sas2, "purpose: comparison", userId)    
     
     return { "blob_url1": blob_url1, "blob_url_sas1": blob_url_sas1, "blob_url2": blob_url2, "blob_url_sas2": blob_url_sas2,"file1": metadata1, "file2": metadata2, "message": "Files uploaded for comparison successfully." }
 
